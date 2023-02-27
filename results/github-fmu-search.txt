@@ -49,6 +49,7 @@ https://github.com/leequalto7/unnc-F22-ABEE1025-Group25/blob/77363a20abb8abdf23e
 https://github.com/leequalto7/unnc-F22-ABEE1025-Group25/blob/77363a20abb8abdf23e1e409919a2523dedd4860/energyplus9.5/DataSets/FMUs/ShadingController.fmu
 https://github.com/lenaRB/crml-compiler/blob/00e6f4f8d82f147c58483a4e9a22d9a4677688ca/src/test/resources/testFiles/use-cases/SSP_example/SRI-3431zfqt/resources/0001_system.fmu
 https://github.com/lenaRB/crml-compiler/blob/00e6f4f8d82f147c58483a4e9a22d9a4677688ca/src/test/resources/testFiles/use-cases/SSP_example/SRIN4_0v3_SRI_0v3_0init.fmu
+https://github.com/leo-drive/SVL_Simulator/blob/4c342fd39c5eca6ce6538a144f51d5929812e417/Assets/Resources/ExampleFMU.fmu
 https://github.com/mohamedleithy/AUC-Thesis-DT/blob/e8533b665ce617988dfa6275f04c7fa381bc4325/FMU/AGV_turtle_electric_drive_Prescan_export.fmu
 https://github.com/mohamedleithy/AUC-Thesis-DT/blob/f5020d14699a39f21d974d011935caf1324f210f/FMU/BrakingSystem.fmu
 https://github.com/ni/niveristand-python/blob/33546fb7871ef33566aae86799653c7ab5cf4d88/tests/testutilities/legacy_files/ModelParameterAPI_AUTOTEST/SinewaveFmu.fmu
