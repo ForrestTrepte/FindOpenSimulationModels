@@ -12,25 +12,28 @@ class DownloadGitHubFiles:
             raise Exception('Environment variable GITHUB_TOKEN must be set to a GitHub personal access token. See https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token.')
 
     def download(self):
-        file_index = 0
+        download_count = 0
         with open(self.url_list_filepath, 'r') as f:
             for line in f:
-                self._process_file(line.strip())
-                file_index += 1
+                if self._process_file(line.strip()):
+                    download_count += 1
 
                 # Don't do lots of downloading in testing mode
-                max_testing_files = 3
-                if self.is_testing and file_index >= max_testing_files:
+                max_testing_files = 2
+                if self.is_testing and download_count >= max_testing_files:
                     print(f'Limiting to {max_testing_files} file downloads in testing mode')
                     return
 
     def _process_file(self, github_file_url):
-        # TODO: Cache previously downloaded files
         # TODO: Rate limiting
 
-        download_url = self._convert_to_download_url(github_file_url)
         local_filepath = self._convert_to_local_filepath(github_file_url)
+        if os.path.exists(local_filepath):
+            print(f'Already downloaded {local_filepath}')
+            return False
+        download_url = self._convert_to_download_url(github_file_url)
         self._download(download_url, local_filepath)
+        return True
 
     def _convert_to_download_url(self, github_file_url):
         # Convert the GitHub URL to a download URL
