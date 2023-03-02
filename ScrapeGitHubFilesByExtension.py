@@ -70,7 +70,7 @@ class ScrapeGitHubFilesByExtension:
         self.page_count = int(current_em.get_attribute('data-total-pages'))
         print(f'Found {self.page_count} pages of results')
         if is_testing:
-            print(f'Limiting to 3 pages for testing purposes')
+            print(f'Limiting to 3 pages in testing mode')
             self.page_count = min(self.page_count, 3)
 
     def __del__(self):

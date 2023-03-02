@@ -1,2 +1,5 @@
 __pycache__/
 .ipynb_checkpoints
+
+# Don't commit the downloaded FMU files themselves. They are large and we won't have permission to redistribute all of them.
+/results/downloads/
