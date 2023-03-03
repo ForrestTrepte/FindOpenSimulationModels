@@ -1,12 +1,16 @@
 import time
 import os
 import requests
+import io
 from collections import namedtuple
+from IPython.display import clear_output, display
+from enum import Enum
 
 class DownloadGitHubFiles:
     def __init__(self, url_list_filepath, is_testing=False):
         self.url_list_filepath = url_list_filepath
         self.is_testing = is_testing
+        self.error_messages = io.StringIO()
 
         # Get GitHub token from environment variable.
         self.github_token = os.environ.get('GITHUB_TOKEN')
@@ -14,23 +18,40 @@ class DownloadGitHubFiles:
             raise Exception('Environment variable GITHUB_TOKEN must be set to a GitHub personal access token. See https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token.')
 
     def download(self):
-        download_count = 0
+        processed_result_counts = [0, 0, 0]
         with open(self.url_list_filepath, 'r') as f:
             for line in f:
-                if self._process_file(line.strip()):
-                    download_count += 1
+                file_url = line.strip()
+                clear_output()
+                print(f'Downloading {file_url}. {processed_result_counts[self._process_file_result.SUCCEEDED.value]} files downloaded, {processed_result_counts[self._process_file_result.FAILED.value]} failed, {processed_result_counts[self._process_file_result.SKIPPED.value]} skipped so far')
+                print(self.error_messages.getvalue())
 
-                    # Don't do lots of downloading in testing mode
-                    max_testing_files = 2
-                    if self.is_testing and download_count >= max_testing_files:
-                        print(f'Limiting to {max_testing_files} file downloads in testing mode')
-                        return
+                processed_result = self._process_file(file_url)
+                processed_result_counts[processed_result.value] += 1
 
-                    # Avoid hitting GitHub with too many rapid-fire requests.
-                    # It seems that because the downloads (https://raw.githubusercontent.com) are not part of the GitHub API URL, the rate limit headers (x-ratelimit*) are not included.
-                    # According to https://stackoverflow.com/questions/66522261/does-github-rate-limit-access-to-public-raw-files, there may be a rate limit of 5000 requests per hour.
-                    sleep_time = .1 if self.is_testing else 60 * 60 / 5000 * 3 # quick results when testing, 3x the rate limit when downloading all the data
-                    time.sleep(sleep_time)
+                if processed_result == self._process_file_result.SKIPPED:
+                    continue
+
+                # Don't do lots of downloading in testing mode
+                max_testing_files = 2
+                if self.is_testing and processed_result_counts[self._process_file_result.SUCCEEDED.value] + processed_result_counts[self._process_file_result.FAILED.value] >= max_testing_files:
+                    print(f'Limiting to {max_testing_files} file downloads in testing mode')
+                    break
+
+                # Avoid hitting GitHub with too many rapid-fire requests.
+                # It seems that because the downloads (https://raw.githubusercontent.com) are not part of the GitHub API URL, the rate limit headers (x-ratelimit*) are not included.
+                # According to https://stackoverflow.com/questions/66522261/does-github-rate-limit-access-to-public-raw-files, there may be a rate limit of 5000 requests per hour.
+                sleep_time = .1 if self.is_testing else 60 * 60 / 5000 * 3 # quick results when testing, 3x the rate limit when downloading all the data
+                time.sleep(sleep_time)
+
+        clear_output()
+        print(f'done. {processed_result_counts[self._process_file_result.SUCCEEDED.value]} files downloaded, {processed_result_counts[self._process_file_result.FAILED.value]} failed, {processed_result_counts[self._process_file_result.SKIPPED.value]} skipped so far')
+        print(self.error_messages.getvalue())
+
+    class _process_file_result(Enum):
+        SUCCEEDED = 0
+        FAILED = 1
+        SKIPPED = 2
 
     def _process_file(self, github_file_url):
         # TODO: Rate limiting
@@ -38,11 +59,12 @@ class DownloadGitHubFiles:
         parsed_url = self._parse_url(github_file_url)
         local_filepath = self._get_local_filepath(parsed_url)
         if os.path.exists(local_filepath):
-            print(f'Already downloaded {local_filepath}')
-            return False
+            return self._process_file_result.SKIPPED
         download_url = self._get_download_url(parsed_url)
-        self._download(download_url, local_filepath)
-        return True
+        if self._download(download_url, local_filepath):
+            return self._process_file_result.SUCCEEDED
+        else:
+            return self._process_file_result.FAILED
 
     ParsedUrl = namedtuple('ParsedUrl', ['owner', 'repo', 'commit_hash', 'filepath'])
     def _parse_url(self, github_file_url):
@@ -86,7 +108,6 @@ class DownloadGitHubFiles:
 
     def _download(self, download_url, local_filepath):
         headers = {'Authorization': f'token {self.github_token}'}
-        print(f'Downloading {download_url} to {local_filepath}')
         response = requests.get(download_url, headers=headers, stream=True)
 
         if response.status_code == 200:
@@ -96,6 +117,11 @@ class DownloadGitHubFiles:
             with open(local_filepath, 'wb') as file:
                 for chunk in response.iter_content(chunk_size=8192):
                     file.write(chunk)
+            return True
         else:
             # Print the error message if the request failed
-            print(f'Request {download_url} failed: {response.status_code} - {response.text}')
+            error_message = f'Request {download_url} failed: {response.status_code} - {response.text}'
+            print(error_message)
+            self.error_messages.write(error_message)
+            self.error_messages.write('\n')
+            return False
