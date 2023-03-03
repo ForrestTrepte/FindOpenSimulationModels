@@ -157,7 +157,7 @@ class ScrapeGitHubFilesByExtension:
                 # But https://api.github.com/rate_limit doesn't seem to be affected by scraping the web site and it
                 # isn't clear how rate limits are handled. Let's be cautious.
                 sleep_time = 3 if self.is_testing else 20 # quick results when testing, 20 seconds when downloading all the data (seems like would be reasonable for a human to read each page in this amount of time)
-                time.sleep(sleep_time) # 20 seconds would be plenty of time for a human to read each page of the search results
+                time.sleep(sleep_time)
 
         self.result_store.save()
 
