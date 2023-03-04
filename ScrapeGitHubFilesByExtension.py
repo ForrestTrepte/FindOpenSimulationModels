@@ -8,6 +8,31 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import urllib.parse
+import requests
+
+def _get_private_repositories():
+    # Return a list of private repositories that the user has access to.
+
+    # Get GitHub token from environment variable.
+    github_token = os.environ.get('GITHUB_TOKEN')
+    if github_token is None:
+        raise Exception('Environment variable GITHUB_TOKEN must be set to a GitHub personal access token. See https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token.')
+
+    headers = {'Authorization': f'token {github_token}'}
+    url = 'https://api.github.com/user/repos?type=private'
+    repos = []
+    while url:
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            raise Exception(f'Error getting private repositories. Status code: {response.status_code} - {response.text}')
+        repos += response.json()
+        if 'next' in response.links:
+            url = response.links['next']['url']
+        else:
+            url = None
+
+    result = [repo['full_name'] for repo in repos]
+    return result
 
 # Helper class for a file to hold results
 class ResultStore:
@@ -20,6 +45,7 @@ class ResultStore:
                     self.results.add(line.strip())
         self.new_results = 0
         self.preexisting_results = 0
+        self.private_results = 0
 
     def add_result(self, result):
         if result in self.results:
@@ -27,9 +53,12 @@ class ResultStore:
             return
         self.results.add(result)
         self.new_results += 1
+    
+    def private_result_occurred(self):
+        self.private_results += 1
 
     def print_stats(self):
-        print(f'This scan has found {self.new_results} new FMUs, {self.preexisting_results} already known FMUs')
+        print(f'This scan has found {self.new_results} new FMUs, {self.preexisting_results} already known FMUs, {self.private_results} FMUs from private repos (filtered out)')
         print(f'The entire collection now has {len(self.results)} FMUs')
 
     def save(self):
@@ -38,10 +67,14 @@ class ResultStore:
                 f.write(result + '\n')
 
 class ScrapeGitHubFilesByExtension:
-    def __init__(self, extension, results_filename, is_testing=False):
+    def __init__(self, extension, results_filename, filter_out_private_repositories=True, is_testing=False):
         self.is_testing = is_testing
         self.extension = extension
         self.result_store = ResultStore(results_filename)
+
+        self.private_repositories = []
+        if filter_out_private_repositories:
+            self.private_repositories = _get_private_repositories()
 
         # Create a new instance of the Chrome browser
         self.driver = webdriver.Chrome()
@@ -85,13 +118,24 @@ class ScrapeGitHubFilesByExtension:
             if (len(item_links) != 1):
                 print(f'Warning: Parsing problem. Search result item contains {len(item_links)} links, expected just 1 link to the FMU file. Something may have changed on the GitHub website.')
             for link in item_links:
-                self.result_store.add_result(link.get_attribute("href"))
+                url = link.get_attribute("href")
+                if self._is_private_result(url):
+                    self.result_store.private_result_occurred()
+                    continue
+                self.result_store.add_result(url)
 
         expected_number_of_results = 10
         if len(item_divs) < expected_number_of_results:
             print(f'Warning: Search page only has {len(item_divs)} items, expected {expected_number_of_results} items.')
             return False
         return True
+
+    def _is_private_result(self, url):
+        split = url.split('/')
+        owner = split[3]
+        repo = split[4]
+        full_name = f'{owner}/{repo}'
+        return full_name in self.private_repositories
 
     def scrape(self):
         # It looks like we're limited to 100 pages so, unfortunately, we won't be able to get all the results using this method.

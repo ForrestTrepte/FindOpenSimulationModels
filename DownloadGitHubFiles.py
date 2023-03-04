@@ -23,8 +23,11 @@ class DownloadGitHubFiles:
             for line in f:
                 file_url = line.strip()
                 clear_output()
-                print(f'Downloading {file_url}. {processed_result_counts[self._process_file_result.SUCCEEDED.value]} files downloaded, {processed_result_counts[self._process_file_result.FAILED.value]} failed, {processed_result_counts[self._process_file_result.SKIPPED.value]} skipped so far')
-                print(self.error_messages.getvalue())
+                print(f'{processed_result_counts[self._process_file_result.SUCCEEDED.value]} files downloaded, {processed_result_counts[self._process_file_result.FAILED.value]} failed, {processed_result_counts[self._process_file_result.SKIPPED.value]} skipped (already cached)')
+                print(f'Downloading {file_url}.')
+                if self.error_messages.getvalue():
+                    print('\nErrors:')
+                    print(self.error_messages.getvalue(), end='')
 
                 processed_result = self._process_file(file_url)
                 processed_result_counts[processed_result.value] += 1
@@ -45,7 +48,8 @@ class DownloadGitHubFiles:
                 time.sleep(sleep_time)
 
         clear_output()
-        print(f'done. {processed_result_counts[self._process_file_result.SUCCEEDED.value]} files downloaded, {processed_result_counts[self._process_file_result.FAILED.value]} failed, {processed_result_counts[self._process_file_result.SKIPPED.value]} skipped so far')
+        print(f'Done.')
+        print(f'{processed_result_counts[self._process_file_result.SUCCEEDED.value]} files downloaded, {processed_result_counts[self._process_file_result.FAILED.value]} failed, {processed_result_counts[self._process_file_result.SKIPPED.value]} skipped (already cached)')
         print(self.error_messages.getvalue())
 
     class _process_file_result(Enum):
@@ -54,8 +58,6 @@ class DownloadGitHubFiles:
         SKIPPED = 2
 
     def _process_file(self, github_file_url):
-        # TODO: Rate limiting
-
         parsed_url = self._parse_url(github_file_url)
         local_filepath = self._get_local_filepath(parsed_url)
         if os.path.exists(local_filepath):

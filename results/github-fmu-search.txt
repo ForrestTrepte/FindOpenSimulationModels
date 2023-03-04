@@ -978,7 +978,6 @@ https://github.com/Batombo/MPC/blob/56216f3cddbb77457a9a952032605ff93b1a58a3/RKF
 https://github.com/Batombo/MPC/blob/56216f3cddbb77457a9a952032605ff93b1a58a3/RKF_decentral/CSTR_tv_parameters/Neural_Network/RKF_Slubice.fmu
 https://github.com/Batombo/MPC/blob/56216f3cddbb77457a9a952032605ff93b1a58a3/RKF_decentral/CSTR_tv_parameters/Neural_Network/RKF_Zielona.fmu
 https://github.com/Batombo/MPC/blob/56216f3cddbb77457a9a952032605ff93b1a58a3/RKF_decentral/CSTR_tv_parameters/RKF_Berlin.fmu
-https://github.com/BonsaiAI/siemens-amesim/blob/d0898f03c13e69badebbc29c15e53ba2cfc76a3b/sim/elevator.fmu
 https://github.com/CATIA-Systems/FMPy/blob/b76dfc85c9308a18f152fc80059cc97b8a86324b/tests/resources/Ball.fmu
 https://github.com/CATIA-Systems/FMPy/blob/b76dfc85c9308a18f152fc80059cc97b8a86324b/tests/resources/Bounce.fmu
 https://github.com/CATIA-Systems/FMPy/blob/b76dfc85c9308a18f152fc80059cc97b8a86324b/tests/resources/Controller.fmu
@@ -3739,6 +3738,14 @@ https://github.com/victorsouza89/cosim_edf/blob/363c4556afdfe66c56858df23794ce13
 https://github.com/victorsouza89/cosim_edf/blob/411296bf5c8b8e9c910d31c0513e556b00203717/examples_windows/IntegratorM.fmu
 https://github.com/victorsouza89/cosim_edf/blob/411296bf5c8b8e9c910d31c0513e556b00203717/examples_windows/IntegratorModelica.fmu
 https://github.com/victorsouza89/cosim_edf/blob/411296bf5c8b8e9c910d31c0513e556b00203717/examples_windows/proportional_control_from_project.fmu
+https://github.com/victorsouza89/cosim_edf/blob/5ef977eafeb9c72c82538b21fcd2ea9bed7a57cf/examples_mac/fmikit/integrator_grt_fmi_rtw/integrator.fmu
+https://github.com/victorsouza89/cosim_edf/blob/5ef977eafeb9c72c82538b21fcd2ea9bed7a57cf/examples_mac/fmikit/proportional_control.fmu
+https://github.com/victorsouza89/cosim_edf/blob/5ef977eafeb9c72c82538b21fcd2ea9bed7a57cf/examples_mac/fmikit/proportional_control_grt_fmi_rtw/proportional_control.fmu
+https://github.com/victorsouza89/cosim_edf/blob/5ef977eafeb9c72c82538b21fcd2ea9bed7a57cf/examples_mac/fmu_gen_orig/integrator.fmu
+https://github.com/victorsouza89/cosim_edf/blob/5ef977eafeb9c72c82538b21fcd2ea9bed7a57cf/examples_mac/fmu_gen_orig/proportional_control.fmu
+https://github.com/victorsouza89/cosim_edf/blob/5ef977eafeb9c72c82538b21fcd2ea9bed7a57cf/examples_mac/fmu_gen_orig/very_simple_tf.fmu
+https://github.com/victorsouza89/cosim_edf/blob/5ef977eafeb9c72c82538b21fcd2ea9bed7a57cf/examples_mac/integrator.fmu
+https://github.com/victorsouza89/cosim_edf/blob/5ef977eafeb9c72c82538b21fcd2ea9bed7a57cf/examples_mac/proportional_control.fmu
 https://github.com/victorsouza89/cosim_edf/blob/70d4421cd1bfe1db661f377a36f46a521c3fdbc3/examples_mac/Rectifier.fmu
 https://github.com/victorsouza89/cosim_edf/blob/70d4421cd1bfe1db661f377a36f46a521c3fdbc3/examples_mac/integrator.fmu
 https://github.com/victorsouza89/cosim_edf/blob/70d4421cd1bfe1db661f377a36f46a521c3fdbc3/examples_mac/very_simple_tf.fmu
