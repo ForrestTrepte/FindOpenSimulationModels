@@ -1,4 +1,6 @@
 import os
+import io
+from IPython.display import clear_output
 from fmpy.validation import validate_fmu
 from fmpy.model_description import read_model_description
 from fmpy import supported_platforms
@@ -8,6 +10,9 @@ class AnalyzeFmuFiles:
     def __init__(self, root_directory, is_testing=False):
         self.root_directory = root_directory
         self.is_testing = is_testing
+        self.valid_count = 0
+        self.invalid_count = 0
+        self.error_messages = io.StringIO()
 
         self.df = pd.DataFrame()
 
@@ -33,22 +38,29 @@ class AnalyzeFmuFiles:
                 if file.endswith('.fmu'):
                     yield os.path.join(root, file)
 
+    def print_status(self, current_status):
+        clear_output()
+        print(current_status)
+        print(f'Analyzed {self.valid_count} valid files, {self.invalid_count} invalid')
+        if self.error_messages.getvalue():
+            print('\nErrors:')
+            print(self.error_messages.getvalue(), end='')
+
     def analyze(self):
-        valid_count = 0
-        invalid_count = 0
         for file in self._file_iterator():
+            self.print_status(f'Analyzing {file}')
             is_valid = self._analyze_fmu_file(file)
             if is_valid:
-                valid_count += 1
+                self.valid_count += 1
             else:
-                invalid_count += 1
+                self.invalid_count += 1
 
             max_testing_files = 5
-            if self.is_testing and valid_count + invalid_count >= max_testing_files:
+            if self.is_testing and self.valid_count + self.invalid_count >= max_testing_files:
                 print(f'Limiting to {max_testing_files} files in testing mode')
                 break
 
-        print(f'{valid_count} valid FMUs, {invalid_count} invalid FMUs')
+        self.print_status(f'Done')
         return self.df
 
     def _analyze_fmu_file(self, fmu_file_path):
@@ -58,7 +70,10 @@ class AnalyzeFmuFiles:
             problems = [str(e)]
         if problems:
             invalid_reason = ', '.join(problems)
-            print(f'FMU file {fmu_file_path} is invalid: {invalid_reason}')
+            error_message = f'{fmu_file_path} is invalid: {invalid_reason}'
+            print(error_message)
+            self.error_messages.write(error_message)
+            self.error_messages.write('\n')
             self._add_result(fmu_file_path, False, invalid_reason, None, None, None, None, None, None, None)
             return False
 

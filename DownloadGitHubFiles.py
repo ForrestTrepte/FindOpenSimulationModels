@@ -3,7 +3,7 @@ import os
 import requests
 import io
 from collections import namedtuple
-from IPython.display import clear_output, display
+from IPython.display import clear_output
 from enum import Enum
 
 class DownloadGitHubFiles:
@@ -11,33 +11,35 @@ class DownloadGitHubFiles:
         self.url_list_filepath = url_list_filepath
         self.is_testing = is_testing
         self.error_messages = io.StringIO()
+        self.processed_result_counts = [0, 0, 0]
 
         # Get GitHub token from environment variable.
         self.github_token = os.environ.get('GITHUB_TOKEN')
         if self.github_token is None:
             raise Exception('Environment variable GITHUB_TOKEN must be set to a GitHub personal access token. See https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token.')
 
+    def print_status(self, current_status):
+        clear_output()
+        print(current_status)
+        print(f'{self.processed_result_counts[self._process_file_result.SUCCEEDED.value]} files downloaded, {self.processed_result_counts[self._process_file_result.FAILED.value]} failed, {self.processed_result_counts[self._process_file_result.SKIPPED.value]} skipped (already cached)')
+        if self.error_messages.getvalue():
+            print('\nErrors:')
+            print(self.error_messages.getvalue(), end='')
+
     def download(self):
-        processed_result_counts = [0, 0, 0]
         with open(self.url_list_filepath, 'r') as f:
             for line in f:
                 file_url = line.strip()
-                clear_output()
-                print(f'{processed_result_counts[self._process_file_result.SUCCEEDED.value]} files downloaded, {processed_result_counts[self._process_file_result.FAILED.value]} failed, {processed_result_counts[self._process_file_result.SKIPPED.value]} skipped (already cached)')
-                print(f'Downloading {file_url}.')
-                if self.error_messages.getvalue():
-                    print('\nErrors:')
-                    print(self.error_messages.getvalue(), end='')
-
+                self.print_status(f'Downloading {file_url}')
                 processed_result = self._process_file(file_url)
-                processed_result_counts[processed_result.value] += 1
+                self.processed_result_counts[processed_result.value] += 1
 
                 if processed_result == self._process_file_result.SKIPPED:
                     continue
 
                 # Don't do lots of downloading in testing mode
                 max_testing_files = 2
-                if self.is_testing and processed_result_counts[self._process_file_result.SUCCEEDED.value] + processed_result_counts[self._process_file_result.FAILED.value] >= max_testing_files:
+                if self.is_testing and self.processed_result_counts[self._process_file_result.SUCCEEDED.value] + self.processed_result_counts[self._process_file_result.FAILED.value] >= max_testing_files:
                     print(f'Limiting to {max_testing_files} file downloads in testing mode')
                     break
 
@@ -47,10 +49,7 @@ class DownloadGitHubFiles:
                 sleep_time = .1 if self.is_testing else 60 * 60 / 5000 * 3 # quick results when testing, 3x the rate limit when downloading all the data
                 time.sleep(sleep_time)
 
-        clear_output()
-        print(f'Done.')
-        print(f'{processed_result_counts[self._process_file_result.SUCCEEDED.value]} files downloaded, {processed_result_counts[self._process_file_result.FAILED.value]} failed, {processed_result_counts[self._process_file_result.SKIPPED.value]} skipped (already cached)')
-        print(self.error_messages.getvalue())
+        self.print_status('Done')
 
     class _process_file_result(Enum):
         SUCCEEDED = 0
@@ -122,7 +121,7 @@ class DownloadGitHubFiles:
             return True
         else:
             # Print the error message if the request failed
-            error_message = f'Request {download_url} failed: {response.status_code} - {response.text}'
+            error_message = f'{download_url}: {response.status_code} - {response.text}'
             print(error_message)
             self.error_messages.write(error_message)
             self.error_messages.write('\n')
