@@ -122,9 +122,15 @@ class AnalyzeFmuFiles:
         except Exception as e:
             problems = [str(e)]
         if problems:
-            invalid_reason = ', '.join(problems)
+            invalid_reason = problems[0]
             error_message = f'{fmu_file_path} is invalid: {invalid_reason}'
             print(error_message)
+
+            # Limit to a single line and at most 80 characters for the results file
+            invalid_reason = invalid_reason.split('\n')[0]
+            if len(invalid_reason) > 80:
+                invalid_reason = invalid_reason[:80] + '...'
+
             self.result_store.add_result(fmu_file_path, False, invalid_reason, None, None, None, None, None, None, None)
             return False
 
