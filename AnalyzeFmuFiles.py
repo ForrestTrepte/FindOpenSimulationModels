@@ -67,7 +67,7 @@ class ResultStore:
         print(f'Analyzed {self.succeeded_count} analyzed files, {self.exception_count} exceptions, {self.preexisting_count} skipped (already cached)')
         if len(self.df) > 0:
             all_succeeded_count = len(self.df[self.df['Validity Has Exception'] == False])
-            print(f'The entire collection now has {all_succeeded_count} valid files')
+            print(f'The entire collection now has {all_succeeded_count} files that were analyzed successfully')
             if all_succeeded_count < len(self.df):
                 print('\nExceptions:')
                 invalid = self.df[self.df['Validity Has Exception'] == True]
@@ -117,19 +117,22 @@ class AnalyzeFmuFiles:
         self.result_store.save()
         self.print_status(f'Done')
         return self.result_store.df
+    
+    def _shorten_message(self, message):
+        # Limit to a single line and at most 80 characters for the results file
+        message = message.split('\n')[0]
+        if len(message) > 80:
+            message = message[:80] + '...'
+        return message
 
     def _analyze_fmu_file(self, fmu_file_path):
         try:
             message = ''
             problems = validate_fmu(fmu_file_path)
             if problems:
-                message = problems[0]
-                # Limit to a single line and at most 80 characters for the results file
-                message = message.split('\n')[0]
-                if len(message) > 80:
-                    message = message[:80] + '...'
+                message = self._shorten_message(problems[0])
 
-            model_description = read_model_description(fmu_file_path)
+            model_description = read_model_description(fmu_file_path, validate=False)
             platforms = supported_platforms(fmu_file_path)
 
             # Count the number of variables with each type of causality
@@ -152,6 +155,8 @@ class AnalyzeFmuFiles:
                 causality_counts.get('output', 0),
                 model_description.generationTool)
             return True
+
         except Exception as e:
+            message = self._shorten_message(str(e))
             self.result_store.add_result(fmu_file_path, True, 0, f'Exception: {e}', None, None, None, None, None, None, None)
             return False
