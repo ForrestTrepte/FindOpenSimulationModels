@@ -15,8 +15,9 @@ class ResultStore:
                 self.results_filepath,
                 dtype = {
                     'Filename': pd.StringDtype(),
-                    'Valid': pd.BooleanDtype(),
-                    'Invalid Reason': pd.StringDtype(),
+                    'Validity Has Exception': pd.BooleanDtype(),
+                    'Validity Problem Count': pd.Int64Dtype(),
+                    'Validity Message': pd.StringDtype(),
                     'FMI Version': pd.StringDtype(),
                     'Co-Simulation': pd.BooleanDtype(),
                     'Model Exchange': pd.BooleanDtype(),
@@ -29,8 +30,8 @@ class ResultStore:
         else:
             self.df = pd.DataFrame()
 
-        self.valid_count = 0
-        self.invalid_count = 0
+        self.succeeded_count = 0
+        self.exception_count = 0
         self.preexisting_count = 0
 
     def check_for_preexisting_result(self, filename):
@@ -39,12 +40,13 @@ class ResultStore:
             self.preexisting_count += 1
         return is_preexisting
 
-    def add_result(self, filename, is_valid, invalid_reason, fmi_version, cosimulation, model_exchange, param_count, input_count, output_count, generation_tool):
+    def add_result(self, filename, validity_has_exception, validity_problem_count, validity_message, fmi_version, cosimulation, model_exchange, param_count, input_count, output_count, generation_tool):
         new_row = pd.DataFrame(
             {
                 'Filename': pd.Series(filename, dtype = pd.StringDtype()),
-                'Valid': pd.Series(is_valid, dtype = pd.BooleanDtype()),
-                'Invalid Reason': pd.Series(invalid_reason, dtype = pd.StringDtype()),
+                'Validity Has Exception': pd.Series(validity_has_exception, dtype = pd.BooleanDtype()),
+                'Validity Problem Count': pd.Series(validity_problem_count, dtype = pd.Int64Dtype()),
+                'Validity Message': pd.Series(validity_message, dtype = pd.StringDtype()),
                 'FMI Version': pd.Series(fmi_version, dtype = pd.StringDtype()),
                 'Co-Simulation': pd.Series(cosimulation, dtype = pd.BooleanDtype()),
                 'Model Exchange': pd.Series(model_exchange, dtype = pd.BooleanDtype()),
@@ -56,21 +58,21 @@ class ResultStore:
         new_row.set_index('Filename', inplace=True)
         self.df = pd.concat([self.df, new_row])
 
-        if is_valid:
-            self.valid_count += 1
+        if validity_has_exception:
+            self.exception_count += 1
         else:
-            self.invalid_count += 1
+            self.succeeded_count += 1
 
     def print_stats(self):
-        print(f'Analyzed {self.valid_count} valid files, {self.invalid_count} invalid, {self.preexisting_count} skipped (already cached)')
+        print(f'Analyzed {self.succeeded_count} analyzed files, {self.exception_count} exceptions, {self.preexisting_count} skipped (already cached)')
         if len(self.df) > 0:
-            valid_count = len(self.df[self.df['Valid'] == True])
-            print(f'The entire collection now has {valid_count} valid files')
-            if valid_count < len(self.df):
-                print('\nErrors:')
-                invalid = self.df[self.df['Valid'] == False]
+            all_succeeded_count = len(self.df[self.df['Validity Has Exception'] == False])
+            print(f'The entire collection now has {all_succeeded_count} valid files')
+            if all_succeeded_count < len(self.df):
+                print('\nExceptions:')
+                invalid = self.df[self.df['Validity Has Exception'] == True]
                 for index, row in invalid.iterrows():
-                    print(f'{index}: {row["Invalid Reason"]}')
+                    print(f'{index}: {row["Validity Message"]}')
 
     def save(self):
         self.df.sort_index(inplace=True)
@@ -95,13 +97,13 @@ class AnalyzeFmuFiles:
 
     def analyze(self):
         for file in self._file_iterator():
-            self.print_status(f'Analyzing {file}')
             if self.result_store.check_for_preexisting_result(file):
                 continue
 
+            self.print_status(f'Analyzing {file}')
             self._analyze_fmu_file(file)
 
-            new_result_count = self.result_store.valid_count + self.result_store.invalid_count
+            new_result_count = self.result_store.succeeded_count + self.result_store.exception_count
             max_testing_files = 5
             if self.is_testing and new_result_count >= max_testing_files:
                 print(f'Limiting to {max_testing_files} files in testing mode')
@@ -118,41 +120,38 @@ class AnalyzeFmuFiles:
 
     def _analyze_fmu_file(self, fmu_file_path):
         try:
+            message = ''
             problems = validate_fmu(fmu_file_path)
+            if problems:
+                message = problems[0]
+                # Limit to a single line and at most 80 characters for the results file
+                message = message.split('\n')[0]
+                if len(message) > 80:
+                    message = message[:80] + '...'
+
+            model_description = read_model_description(fmu_file_path)
+            platforms = supported_platforms(fmu_file_path)
+
+            # Count the number of variables with each type of causality
+            causality_counts = {}
+            for variable in model_description.modelVariables:
+                if variable.causality not in causality_counts:
+                    causality_counts[variable.causality] = 0
+                causality_counts[variable.causality] += 1
+
+            self.result_store.add_result(
+                fmu_file_path,
+                False,
+                len(problems),
+                message,
+                model_description.fmiVersion,
+                model_description.coSimulation is not None,
+                model_description.modelExchange is not None,
+                causality_counts.get('parameter', 0),
+                causality_counts.get('input', 0),
+                causality_counts.get('output', 0),
+                model_description.generationTool)
+            return True
         except Exception as e:
-            problems = [str(e)]
-        if problems:
-            invalid_reason = problems[0]
-            error_message = f'{fmu_file_path} is invalid: {invalid_reason}'
-            print(error_message)
-
-            # Limit to a single line and at most 80 characters for the results file
-            invalid_reason = invalid_reason.split('\n')[0]
-            if len(invalid_reason) > 80:
-                invalid_reason = invalid_reason[:80] + '...'
-
-            self.result_store.add_result(fmu_file_path, False, invalid_reason, None, None, None, None, None, None, None)
+            self.result_store.add_result(fmu_file_path, True, 0, f'Exception: {e}', None, None, None, None, None, None, None)
             return False
-
-        model_description = read_model_description(fmu_file_path)
-        platforms = supported_platforms(fmu_file_path)
-
-        # Count the number of variables with each type of causality
-        causality_counts = {}
-        for variable in model_description.modelVariables:
-            if variable.causality not in causality_counts:
-                causality_counts[variable.causality] = 0
-            causality_counts[variable.causality] += 1
-
-        self.result_store.add_result(
-            fmu_file_path,
-            True,
-            '',
-            model_description.fmiVersion,
-            model_description.coSimulation is not None,
-            model_description.modelExchange is not None,
-            causality_counts.get('parameter', 0),
-            causality_counts.get('input', 0),
-            causality_counts.get('output', 0),
-            model_description.generationTool)
-        return True
