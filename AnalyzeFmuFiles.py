@@ -25,6 +25,7 @@ class ResultStore:
                     'Input Count': pd.Int64Dtype(),
                     'Output Count': pd.Int64Dtype(),
                     'Generation Tool': pd.StringDtype(),
+                    'Platforms': pd.StringDtype(),
                 },
                 index_col = 'Filename')
         else:
@@ -40,7 +41,7 @@ class ResultStore:
             self.preexisting_count += 1
         return is_preexisting
 
-    def add_result(self, filename, validity_has_exception, validity_problem_count, validity_message, fmi_version, cosimulation, model_exchange, param_count, input_count, output_count, generation_tool):
+    def add_result(self, filename, validity_has_exception, validity_problem_count, validity_message, fmi_version, cosimulation, model_exchange, param_count, input_count, output_count, generation_tool, platforms):
         new_row = pd.DataFrame(
             {
                 'Filename': pd.Series(filename, dtype = pd.StringDtype()),
@@ -54,6 +55,7 @@ class ResultStore:
                 'Input Count': pd.Series(input_count, dtype = pd.Int64Dtype()),
                 'Output Count': pd.Series(output_count, dtype = pd.Int64Dtype()),
                 'Generation Tool': pd.Series(generation_tool, dtype = pd.StringDtype()),
+                'Platforms': pd.Series(platforms, dtype = pd.StringDtype()),
             })
         new_row.set_index('Filename', inplace=True)
         self.df = pd.concat([self.df, new_row])
@@ -153,10 +155,11 @@ class AnalyzeFmuFiles:
                 causality_counts.get('parameter', 0),
                 causality_counts.get('input', 0),
                 causality_counts.get('output', 0),
-                model_description.generationTool)
+                model_description.generationTool,
+                ';'.join(platforms))
             return True
 
         except Exception as e:
             message = self._shorten_message(str(e))
-            self.result_store.add_result(fmu_file_path, True, 0, f'Exception: {e}', None, None, None, None, None, None, None)
+            self.result_store.add_result(fmu_file_path, True, 0, f'Exception: {e}', None, None, None, None, None, None, None, None)
             return False
