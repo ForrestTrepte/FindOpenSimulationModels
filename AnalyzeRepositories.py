@@ -25,14 +25,10 @@ class ResultStore:
         self.succeeded_count = 0
         self.failed_count = 0
         self.preexisting_count = 0
-        self.preexisting_repositories = set()
 
     def check_for_preexisting_result(self, repository):
-        if repository in self.preexisting_repositories:
-            return True
         is_preexisting = repository in self.df.index
         if is_preexisting:
-            self.preexisting_repositories.add(repository)
             self.preexisting_count += 1
         return is_preexisting
 
@@ -81,9 +77,13 @@ class AnalyzeRepositories:
         self.result_store.print_stats()
 
     def analyze(self):
+        already_checked = set()
         for index, row in self.result_store.file_results.df.iterrows():
             split_index = index.split('\\')
             repository = f'{split_index[1]}/{split_index[2]}'
+            if repository in already_checked:
+                continue
+            already_checked.add(repository)
             if self.result_store.check_for_preexisting_result(repository):
                 continue
 
